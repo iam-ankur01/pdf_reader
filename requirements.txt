@@ -1,4 +1,5 @@
 streamlit
+pypdf
 transformers
 torch
 langchain
