@@ -1,11 +1,10 @@
 streamlit
-pypdf
-transformers
-torch
 langchain
-langchain-huggingface
 langchain-community
+langchain-huggingface
+langchain-text-splitters
+transformers
 sentence-transformers
 chromadb
-accelerate
-
+pypdf
+torch
