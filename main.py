@@ -1,40 +1,49 @@
 import streamlit as st
+import os
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from transformers import pipeline
 from langchain_huggingface import HuggingFacePipeline
+
+from transformers import pipeline
+
 from langchain.prompts import PromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
-import os
 
-st.set_page_config(page_title="PDF QA WebApp", page_icon="📄")
 
-st.title("📄 PDF Question Answering WebApp")
-st.write("Upload a PDF and ask questions based on its content!")
+st.set_page_config(
+    page_title="PDF QA App",
+    page_icon="📄"
+)
 
-# Upload PDF
-uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+st.title("📄 PDF Question Answering App")
+
+uploaded_file = st.file_uploader(
+    "Upload PDF",
+    type="pdf"
+)
 
 if uploaded_file is not None:
 
     # Save PDF temporarily
-    pdf_path = f"temp_{uploaded_file.name}"
+    pdf_path = "temp.pdf"
 
     with open(pdf_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    st.success(f"Uploaded: {uploaded_file.name}")
+    st.success("PDF Uploaded Successfully!")
 
     # Load PDF
     loader = PyPDFLoader(pdf_path)
+
     documents = loader.load()
 
     st.write(f"Loaded {len(documents)} pages")
 
-    # Split text
+    # Split Text
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=100
@@ -49,15 +58,15 @@ if uploaded_file is not None:
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    # Vector DB
-    vectorstore = Chroma.from_documents(
-        documents=docs,
-        embedding=embeddings
+    # Vector Store
+    vectorstore = FAISS.from_documents(
+        docs,
+        embeddings
     )
 
     retriever = vectorstore.as_retriever()
 
-    st.success("Embeddings created successfully!")
+    st.success("Vector Database Ready!")
 
     # LLM
     pipe = pipeline(
@@ -66,12 +75,14 @@ if uploaded_file is not None:
         max_length=256
     )
 
-    llm = HuggingFacePipeline(pipeline=pipe)
+    llm = HuggingFacePipeline(
+        pipeline=pipe
+    )
 
     # Prompt
     prompt = PromptTemplate(
         template="""
-        Answer the question based only on the context below.
+        Answer the question using the context below.
 
         Context:
         {context}
@@ -84,7 +95,7 @@ if uploaded_file is not None:
         input_variables=["context", "input"]
     )
 
-    # Chains
+    # Create Chains
     document_chain = create_stuff_documents_chain(
         llm,
         prompt
@@ -95,18 +106,21 @@ if uploaded_file is not None:
         document_chain
     )
 
-    # User Query
-    query = st.text_input("Ask a question about the PDF")
+    # User Question
+    query = st.text_input(
+        "Ask a question about the PDF"
+    )
 
     if query:
 
-        with st.spinner("Generating answer..."):
+        with st.spinner("Generating Answer..."):
 
             response = retrieval_chain.invoke({
                 "input": query
             })
 
-        st.markdown("### Answer")
+        st.subheader("Answer")
+
         st.write(response["answer"])
 
     # Cleanup
